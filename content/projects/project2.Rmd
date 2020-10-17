@@ -1,0 +1,110 @@
+---
+title: 'Session 4: Homework 2'
+author: "Your name goes here"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: flatly
+    highlight: zenburn
+    number_sections: yes
+    toc: yes
+    toc_float: yes
+    code_folding: show
+  pdf_document:
+    toc: yes
+---
+
+
+```{r, setup, include=FALSE}
+knitr::opts_chunk$set(
+  message = FALSE, 
+  warning = FALSE, 
+  tidy=FALSE,     # display code as typed
+  size="small")   # slightly smaller font for code
+options(digits = 3)
+
+# default figure size
+knitr::opts_chunk$set(
+  fig.width=6.75, 
+  fig.height=6.75,
+  fig.align = "center"
+)
+```
+
+
+```{r load-libraries, include=FALSE}
+library(tidyverse)  # Load ggplot2, dplyr, and all the other tidyverse packages
+library(mosaic)
+library(ggthemes)
+library(lubridate)
+library(here)
+library(skimr)
+library(janitor)
+library(httr)
+library(readxl)
+library(vroom)
+```
+
+
+# ------------------begin of project 2----------------------
+##Trump's Approval Margins
+
+As we saw in class, fivethirtyeight.com has detailed data on [all polls that track the president's approval ](https://projects.fivethirtyeight.com/trump-approval-ratings)
+
+```{r, cache=TRUE}
+# Import approval polls data
+approval_polllist <- read_csv('https://projects.fivethirtyeight.com/trump-approval-data/approval_polllist.csv') 
+
+
+# or directly off fivethirtyeight website
+# approval_polllist <- read_csv('https://projects.fivethirtyeight.com/trump-approval-data/approval_polllist.csv') 
+
+glimpse(approval_polllist)
+
+# Use `lubridate` to fix dates, as they are given as characters.
+
+
+approval_polllist <- approval_polllist  %>%
+  mutate(modeldate = mdy(modeldate),startdate = mdy(startdate), enddate = mdy(enddate))
+glimpse(approval_polllist)
+
+
+```
+
+## Create a plot
+
+What I would like you to do is to calculate the average net approval rate (approve- disapprove) for each week since he got into office. I want you plot the net approval, along with its 95% confidence interval. There are various dates given for each poll, please use `enddate`, i.e., the date the poll ended.
+
+```{r trump_margins, echo=FALSE, out.width="100%"}
+knitr::include_graphics(here::here("images", "trump_approval_margin.png"), error = FALSE)
+
+
+approval_polllist_cleaned <- approval_polllist  %>%  
+  select(enddate,approve,disapprove ) 
+approval_polllist_cleaned
+
+approval_polllist_cleaned$netapprovalrate <- approval_polllist_cleaned$approve - approval_polllist_cleaned$disapprove
+approval_polllist_cleaned
+
+approval_polllist_cleaned <- approval_polllist_cleaned %>%  
+   mutate (year = year(enddate),
+          month = lubridate::month(enddate, label = TRUE),
+          week = isoweek(enddate)) %>%
+group_by(year,week) %>%
+summarise(mean= mean(netapprovalrate), sd_rate = sd(netapprovalrate),
+            count = n(),
+            t_critical = qt(0.975, count-1),
+            se_rate = sd(netapprovalrate)/sqrt(count),
+            margin_of_error = t_critical * se_rate,
+            rate_low = mean - margin_of_error,
+           rate_high = mean + margin_of_error, .groups = 'drop') 
+approval_polllist_cleaned
+
+
+plot1 <- ggplot(data= approval_polllist_cleaned, mapping = aes(x = week, y = mean, color = year)) +
+geom_point()+ geom_line() + theme(legend.position="none") + facet_wrap(~year) + labs( x = " Weak of the year", y = " Average Net Approval %", title = "Estimating Net Approval (approve-disapprove) for Donald Trump", subtitle = "Weekly average of all polls" ) + scale_x_continuous(breaks = seq(from = 0, to = 52, by = 13))+ scale_y_continuous(breaks = seq(from = -20, to = 7.5, by = 2.5)) + geom_hline(yintercept=0, color = "orange") + geom_ribbon(aes(ymin=rate_low, ymax=rate_high), linetype=1, alpha=0.1) + NULL
+plot1 
+
+```
+We can observe that the range for week 15 is lower than the range for week 34. This means that the degree of certainty of the results is more in week 15 when compared to the degree of certainty of results of week 34. This could be because the average sample size in week 15 is greater than the average sample size in week 34. As the sample size increases, the variation around the mean reduces, giving us a narrower confidence interval.  
+# ------------------end of project 2----------------------

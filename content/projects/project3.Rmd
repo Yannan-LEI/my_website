@@ -1,0 +1,132 @@
+---
+title: 'Session 4: Homework 2'
+author: "Your name goes here"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: flatly
+    highlight: zenburn
+    number_sections: yes
+    toc: yes
+    toc_float: yes
+    code_folding: show
+  pdf_document:
+    toc: yes
+---
+
+
+```{r, setup, include=FALSE}
+knitr::opts_chunk$set(
+  message = FALSE, 
+  warning = FALSE, 
+  tidy=FALSE,     # display code as typed
+  size="small")   # slightly smaller font for code
+options(digits = 3)
+
+# default figure size
+knitr::opts_chunk$set(
+  fig.width=6.75, 
+  fig.height=6.75,
+  fig.align = "center"
+)
+```
+
+
+```{r load-libraries, include=FALSE}
+library(tidyverse)  # Load ggplot2, dplyr, and all the other tidyverse packages
+library(mosaic)
+library(ggthemes)
+library(lubridate)
+library(here)
+library(skimr)
+library(janitor)
+library(httr)
+library(readxl)
+library(vroom)
+```
+
+
+# ------------------begin of project 3----------------------
+# CDC COVID-19 Public Use Data
+
+Let us revisit the [CDC Covid-19 Case Surveillance Data](https://data.cdc.gov/Case-Surveillance/COVID-19-Case-Surveillance-Public-Use-Data/vbim-akqf). There are well over 3 million entries of individual, de-identified patient data. Since this is a large file, I suggest you use `vroom` to load it and you keep `cache=TRUE` in the chunk options.
+
+
+```{r, cache=TRUE}
+# file contains 11 variables and 3.66m rows and is well over 380Mb. 
+# It will take time to download
+
+# URL link to CDC to download data
+url <- "https://data.cdc.gov/api/views/vbim-akqf/rows.csv?accessType=DOWNLOAD"
+
+```
+
+Given the data we have, I would like you to produce two graphs that show death % rate:
+
+1. by age group, sex, and whether the patient had co-morbidities or not
+1. by age group, sex, and whether the patient was admited to Intensive Care Unit (ICU) or not.
+
+
+```{r covid_challenge, echo=FALSE, out.width="100%"}
+knitr::include_graphics(here::here("images", "covid_death_rate_comorbidities.png"), error = FALSE)
+knitr::include_graphics(here::here("images", "covid_death_rate_icu.png"), error = FALSE)
+
+covid_data <- vroom::vroom(url)%>% # If vroom::vroom(url) doesn't work, use read_csv(url)
+  clean_names()
+
+covid_clean <- covid_data %>% 
+  select(5,6,9,10,11) %>% 
+  group_by(age_group,death_yn) %>% 
+  filter(death_yn != "Missing",death_yn !="Unknown" , medcond_yn !="Missing", medcond_yn !="Unknown", sex != "Missing",sex != "Other",    sex != "Unknown", icu_yn != "Unknown", icu_yn != "Missing")
+
+
+covid_death_medcond <- covid_clean %>% 
+  group_by(age_group, sex, medcond_yn, death_yn) %>%
+  summarise(Number=n()) %>% 
+  mutate(Percentage=Number/sum(Number)*100) %>% 
+  filter(death_yn=="Yes")
+
+  icu.labs <- c("Addmited ICU", "Not Admitted ICU")
+  names(icu.labs) <- c("Yes", "No")
+
+  morb.labs <- c("Comorbidities", "No Comorbidities")
+  names(morb.labs) <- c("Yes", "No")
+  
+ggplot(covid_death_medcond, aes(x=Percentage, y=age_group)) + geom_col(fill="magenta") + facet_grid(cols = vars(sex), 
+       rows = vars(medcond_yn), 
+       as.table = FALSE, labeller = labeller(medcond_yn = morb.labs)) + 
+       labs(title = "Covid % death rate by age group, sex and presence of comorbidities", x="% death rate", y="") +
+       geom_text(aes(label=round(Percentage, digits = 1)),hjust=0, vjust=0) 
+
+  
+  covid_death_icu <- covid_clean %>% 
+  group_by(age_group, sex, icu_yn, death_yn) %>%
+  summarise(Number=n()) %>% 
+  mutate(Percentage=Number/sum(Number)*100) %>% 
+  filter(death_yn=="Yes")
+
+ggplot(covid_death_icu, aes(x=Percentage, y=age_group)) + geom_col(fill="purple") + facet_grid(cols = vars(sex), 
+       rows = vars(icu_yn), 
+       as.table = FALSE, labeller = labeller(icu_yn = icu.labs)) + 
+       labs(title = "Covid % death rate by age group, sex and admition to ICU", x="% death rate", y="") +
+       geom_text(aes(label=round(Percentage, digits = 1)),hjust=0, vjust=0)
+```
+
+
+
+``` {r,primary school enrolment}
+
+# relationship between primary school enrollment and fertility rates 
+
+enrolment_data <- ggplot(tidy_country_data, aes(x=School_enrollment, y=Fertility_rate, colour=region))+
+  geom_point()+
+  geom_smooth()+
+  labs(x="Enrolment", y="Fertility", title="Relationship between enrolment and fertility")+
+  theme_economist()+
+  theme(axis.title=element_text()) 
+  
+enrolment_data
+
+
+```
+# ------------------end of project 3----------------------
