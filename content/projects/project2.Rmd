@@ -53,7 +53,7 @@ As we saw in class, fivethirtyeight.com has detailed data on [all polls that tra
 
 ```{r, cache=TRUE}
 # Import approval polls data
-approval_polllist <- read_csv('https://projects.fivethirtyeight.com/trump-approval-data/approval_polllist.csv') 
+approval_polllist <- read_csv(here::here("data", "approval.csv")) 
 
 
 # or directly off fivethirtyeight website
