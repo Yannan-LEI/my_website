@@ -76,7 +76,7 @@ glimpse(approval_polllist)
 What I would like you to do is to calculate the average net approval rate (approve- disapprove) for each week since he got into office. I want you plot the net approval, along with its 95% confidence interval. There are various dates given for each poll, please use `enddate`, i.e., the date the poll ended.
 
 ```{r trump_margins, echo=FALSE, out.width="100%"}
-knitr::include_graphics(here::here("images", "trump_approval_margin.png"), error = FALSE)
+knitr::include_graphics(here::here("data", "trump_approval_margin.png"), error = FALSE)
 
 
 approval_polllist_cleaned <- approval_polllist  %>%  
