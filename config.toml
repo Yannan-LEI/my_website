@@ -1,5 +1,5 @@
 # Site settings
-baseURL = "http://annlei.netlify.app/"
+baseURL = "https://annlei.netlify.app/"
 languageCode = "en-us"
 title = "Portfolio website for Ann LEI"
 theme = "forty"
@@ -110,10 +110,10 @@ disqusShortname = ""
       url = "projects/project3"
 
     [[params.tiles.showcase]]
-      title = "Ipsum"
-      subtitle = "Nisl Sed Aliquam"
+      title = "Excess rentals in TfL bike sharing"
+      subtitle = "Facet grid that plots bikes hired by month and year"
       image = "projects/tile4.jpg"
-      url = "blogs/ipsum"
+      url = "projects/project4"
 
    #[[params.tiles.showcase]]
      # title = "Consequat"
@@ -190,19 +190,19 @@ disqusShortname = ""
     copyright = "Company Name"
 
     # Uses font awesome icons
-    [[params.footer.social]]
-      icon = "fa-twitter"
-      url= "https://www.twitter.com"
-      label = "Twitter"
+    #[[params.footer.social]]
+      #icon = "fa-twitter"
+      #url= "https://www.twitter.com"
+      #label = "Twitter"
 
     [[params.footer.social]]
       icon = "fa-facebook"
-      url= "https://www.facebook.com"
+      url= "https://www.facebook.com/profile.php?id=100007915158259"
       label = "Facebook"
 
     [[params.footer.social]]
       icon = "fa-instagram"
-      url= "https://www.instagram.com"
+      url= "https://www.instagram.com/superfishya/"
       label = "Instagram"
     
     [[params.footer.social]]
@@ -212,10 +212,10 @@ disqusShortname = ""
 
     [[params.footer.social]]
       icon = "fa-linkedin"
-      url= "https://www.linkedin.com"
+      url= "https://www.linkedin.com/in/yannan-lei-82246513a/"
       label = "LinkedIn"
 
-    [[params.footer.quicklinks]]
-      text = "Design: "
-      url= "https://www.html5up.net"
-      alt = "HTML5 UP"
+    #[[params.footer.quicklinks]]
+      #text = "Design: "
+      #url= "https://www.html5up.net"
+      #alt = "HTML5 UP"
