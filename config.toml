@@ -95,7 +95,7 @@ disqusShortname = ""
       title = "Climate change and temperature anomalies"
       subtitle = "Define temperature anomalies"
       image = "projects/tile1.jpg"
-      url = "projects/project1"
+      url = "projects/project1/index"
 
     [[params.tiles.showcase]]
       title = "Trump's Approval Margins"
