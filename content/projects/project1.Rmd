@@ -113,7 +113,6 @@ plot2 <- ggplot(wine_plot, aes (x=wine_servings, y=reorder(country, wine_serving
          plot.title  = element_text (size=13, colour="#0000FF"), plot.subtitle = element_text(size=9),
         axis.title =  element_text(size=10, colour="#002144"), axis.title.y= element_text(size=10, colour="#002144"))
 plot2
-
 ```
 
 Finally, make a plot that shows the top 25 spirit consuming countries
