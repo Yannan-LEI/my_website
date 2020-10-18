@@ -1,8 +1,5 @@
 ---
----
-title: 'Session 4: Homework 2'
-author: "Your name goes here"
-date: "`r Sys.Date()`"
+title: "Omega Group plc- Pay Discrimination"
 output:
   html_document:
     theme: flatly
@@ -37,169 +34,126 @@ knitr::opts_chunk$set(
 library(tidyverse)  # Load ggplot2, dplyr, and all the other tidyverse packages
 library(mosaic)
 library(ggthemes)
-library(lubridate)
+library(GGally)
+library(readxl)
 library(here)
 library(skimr)
 library(janitor)
-library(httr)
-library(readxl)
-library(vroom)
+library(broom)
+library(tidyquant)
+library(infer)
+library(openintro)
+library(tidyquant)
 ```
 
 
-# ------------------begin of project 4----------------------
-# Excess rentals in TfL bike sharing
+At the last board meeting of Omega Group Plc., the headquarters of a large multinational company, the issue was raised that women were being discriminated in the company, in the sense that the salaries were not the same for male and female executives. A quick analysis of a sample of 50 employees (of which 24 men and 26 women) revealed that the average salary for men was about 8,700 higher than for women. This seemed like a considerable difference, so it was decided that a further analysis of the company salaries was warranted. 
 
-Recall the TfL data on how many bikes were hired every single day. We can get the latest data by running the following
+You are asked to carry out the analysis. The objective is to find out whether there is indeed a significant difference between the salaries of men and women, and whether the difference is due to discrimination or whether it is based on another, possibly valid, determining factor. 
 
-```{r, get_tfl_data, cache=TRUE}
-url <- "https://data.london.gov.uk/download/number-bicycle-hires/ac29363e-e0cb-47cc-a97a-e216d900a6b0/tfl-daily-cycle-hires.xlsx"
+## Loading the data
 
-# Download TFL data to temporary file
-httr::GET(url, write_disk(bike.temp <- tempfile(fileext = ".xlsx")))
 
-# Use read_excel to read it as dataframe
-# Use read_excel to read it as dataframe
-bike0 <- read_excel(bike.temp,
-                   sheet = "Data",
-                   range = cell_cols("A:B"))
+```{r load_omega_data}
+omega <- read_csv(here::here("data", "omega.csv"))
+glimpse(omega) # examine the data frame
+```
 
-# change dates to get year, month, and week
-bike <- bike0 %>% 
-  clean_names() %>% 
-  rename (bikes_hired = number_of_bicycle_hires) %>% 
-  mutate (year = year(day),
-          month = lubridate::month(day),
-          week = isoweek(day))
-glimpse(bike)
+## Relationship Salary - Gender ?
+
+The data frame `omega`  contains the salaries for the sample of 50 executives in the company. Can you conclude that there is a significant difference between the salaries of the male and female executives?
+
+Note that you can perform different types of analyses, and check whether they all lead to the same conclusion 
+
+.	Confidence intervals
+.	Hypothesis testing
+.	Correlation analysis
+.	Regression
+
+
+Calculate summary statistics on salary by gender. Also, create and print a dataframe where, for each gender, you show the mean, SD, sample size, the t-critical, the SE, the margin of error, and the low/high endpoints of a 95% condifence interval
+
+```{r, confint_single_valiables}
+# Summary Statistics of salary by gender
+mosaic::favstats (salary ~ gender, data=omega)
+
+# Dataframe with two rows (male-female) and having as columns gender, mean, SD, sample size, 
+# the t-critical value, the standard error, the margin of error, 
+# and the low/high endpoints of a 95% condifence interval
+sum_stat <- omega %>% group_by(gender) %>%
+            summarise(mean=mean(salary),
+                      sd=sd(salary),
+                      samp_size=n(),
+                      t_crit= qt(.975,samp_size-1),
+                      se=sd/sqrt(samp_size),
+                      MoE=t_crit*se,
+                      lower_ci_95 = mean-se,
+                      upper_ci_95 = mean+se)
+sum_stat
+                  
+```
+
+> What can you conclude from your analysis? A couple of sentences would be enough
+
+You can also run a hypothesis testing, assuming as a null hypothesis that the mean difference in salaries is zero, or that, on average, men and women make the same amount of money. You should tun your hypothesis testing using `t.test()` and with the simulation method from the `infer` package.
+
+```{r, hypothesis_testing}
+# hypothesis testing using t.test() 
+t.test((omega %>% filter(gender=="male"))$salary,(omega%>%filter(gender=="female"))$salary)
+
+# hypothesis testing using infer package
+set.seed(1234)
+simu <- omega %>% specify(salary~gender) %>% hypothesize(null="independence")%>%generate(reps=1000,type="permute")
+
+sim_delta_mean <-simu%>% calculate(stat="diff in means", order=c("male","female"))
+
+real_delta_mean <- omega %>% specify(salary~gender)%>% calculate(stat="diff in means", order=c("male","female"))
+
+sim_delta_mean %>% visualise (obs_stat = real_delta_mean, direction="both")+labs(title="Wage gap by gender",subtitle="Observed difference in red")  
 
 ```
 
-We can easily create a facet grid that plots bikes hired by month and year.
+> What can you conclude from your analysis? A couple of sentences would be enough
 
-```{r tfl_month_year_grid, echo=FALSE, out.width="100%"}
-knitr::include_graphics(here::here("images", "tfl_distributions_monthly.png"), error = FALSE)
 
-knitr::include_graphics(here::here("images", "tfl_distributions_monthly.png"), error = FALSE)
-bike %>%
-  filter(year %in% c(2015,2016,2017,2018,2019,2020)) %>%
-  ggplot(aes(x=bikes_hired)) +
-  geom_density() +
-  facet_grid(
-    rows = vars(year),
-    cols = vars(month),
-    scales = "free"
-  ) +
-    labs(
-    title = "Distribution of bikes hired per month",
-    x = "Bikes Rentals",
-    y = ""
-  )
-ggplot
+## Relationship Experience - Gender?
+
+At the board meeting, someone raised the issue that there was indeed a substantial difference between male and female salaries, but that this was attributable to other reasons such as differences in experience. A questionnaire send out to the 50 executives in the sample reveals that the average experience of the men is approximately 21 years, whereas the women only have about 7 years experience on average (see table below).
+
+```{r, experience_stats}
+# Summary Statistics of salary by gender
+favstats (experience ~ gender, data=omega)
 
 ```
 
-Look at May and Jun and compare 2020 with the previous years. What's happening?
+Based on this evidence, can you conclude that there is a significant difference between the experience of the male and female executives? Perform similar analyses as in the previous section. Does your conclusion validate or endanger your conclusion about the difference in male and female salaries?  
 
-However, the challenge I want you to work on is to reproduce the following two graphs.
 
-```{r tfl_absolute_monthly_change, echo=FALSE, out.width="100%"}
-knitr::include_graphics(here::here("images", "tfl_monthly.png"), error = FALSE)
 
-bike2 <- bike  %>%
-  filter(year %in% c("2015","2016","2017","2018","2019","2020"))%>%
-  group_by(year,month) %>%
-  mutate(average_month=mean(bikes_hired)) %>%
-  ungroup() %>%
-  group_by(year,week)%>%
-  mutate(average_week=mean(bikes_hired)) %>%
-  ungroup()%>%
-  group_by(month)%>%
-  mutate(expected_month=mean(bikes_hired))%>%
-  ungroup()%>%
-  group_by(week)%>%
-  mutate(expected_week=mean(bikes_hired)) %>%
-  ungroup() %>%
-  mutate(excess_month=average_month-expected_month,excess_week=average_week-expected_week)
-glimpse(bike2)
+## Relationship Salary - Experience ?
 
-# clean the data for monthly average
-bikemonth <-bike2 %>%
-  select(day,year,month,average_month,expected_month,excess_month) %>%
-  group_by(year,month) %>%
-  filter(row_number()==1)%>%
-  ungroup()%>%
-  mutate(excess=ifelse(excess_month<0,"A","B"),
-         min=ifelse(excess_month<=0,average_month,expected_month),
-         max=ifelse(excess_month>0,average_month,expected_month))
-glimpse(bikemonth)
+Someone at the meeting argues that clearly, a more thorough analysis of the relationship between salary and experience is required before any conclusion can be drawn about whether there is any gender-based salary discrimination in the company.
 
-# draw plot of monthly change
-  ggplot(bikemonth)+
-    facet_wrap(vars(year))+
-    geom_line(aes(x=month,y=expected_month,group=1),color="blue")+
-    geom_line(aes(x=month,y=average_month,group=1))+
-    geom_ribbon(aes(x=month,ymin=min,ymax=expected_month),fill="#fa9fb5",alpha=0.8)+
-    geom_ribbon(aes(x=month,ymin=min,ymax=average_month),fill="#c7e9c0",alpha=0.8)+
-    scale_x_continuous(breaks=seq(1,12,1),labels = c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))+
-    theme(panel.border =element_rect(color="transparent",fill="transparent"),
-          panel.background=element_rect(fill="white"),
-          panel.grid.major = element_line(colour = "#f0f0f0"),
-          panel.grid.minor = element_line(colour = "#f0f0f0"),
-          strip.background = element_rect(color="transparent",fill="transparent"),
-          plot.title=element_text(size=10,face="bold"),
-          plot.subtitle=element_text(size=9),
-          strip.text=element_text(size=5),
-          axis.text.x=element_text(size=5),
-          axis.text.y=element_text(size=5))+
-    labs(x=NULL,y="Bike rentals",title="Monthly changes in Tfl bike rentals",subtitle = "Change from monthly average shown in blue\nand calculated between 2015-2019")+
-    guides(fill=F)
+Analyse the relationship between salary and experience. Draw a scatterplot to visually inspect the data
+
+
+```{r, salary_exp_scatter}
+ggplot(omega, aes(experience,salary)) + geom_point() +geom_smooth(method=lm) +
+  labs(x="Exp (years)", y = "Salary")
 
 ```
 
-The second one looks at percentage changes from the expected level of weekly rentals. The two grey shaded rectangles correspond to the second (weeks 14-26) and fourth (weeks 40-52) quarters.
 
-```{r tfl_percent_change, echo=FALSE, out.width="100%"}
-knitr::include_graphics(here::here("images", "tfl_weekly.png"), error = FALSE)
+## Check correlations between the data
+You can use `GGally:ggpairs()` to create a scatterplot and correlation matrix. Essentially, we change the order our variables will appear in and have the dependent variable (Y), salary, as last in our list. We then pipe the dataframe to `ggpairs()` with `aes` arguments to colour by `gender` and make ths plots somewhat transparent (`alpha  = 0.3`).
 
-#clean the data of weekly rentals
-bikeweek <- bike2 %>%
-  select(day,year,week,average_week,expected_week,excess_week) %>%
-  group_by(year,week) %>%
-  filter(row_number()==1)%>%
-  ungroup()%>%
-  mutate(change_rate=excess_week/expected_week,group=ifelse(change_rate>0,"A","B"),rectangle=ifelse(week %in% c(14:26,40:52),"G","W"),min=ifelse(change_rate>0,0,change_rate))
-glimpse(bikeweek)
-
-#draw plot of weekly rentals
-ggplot(bikeweek)+
-  facet_wrap(vars(year))+
-  geom_rect(aes(xmin=13,xmax=26,ymin=-Inf,ymax=+Inf),fill="#f0f0f0",alpha=0.1)+
-  geom_rect(aes(xmin=39,xmax=52,ymin=-Inf,ymax=+Inf),fill="#f0f0f0",alpha=0.1)+
-  geom_line(aes(x=week,y=change_rate,group=1))+
-  geom_ribbon(aes(x=week,ymin=min,ymax=change_rate),fill="lightgreen",alpha=0.8)+
-  geom_ribbon(aes(x=week,ymin=min,ymax=0),fill="lightpink",alpha=0.8)+
-  scale_y_continuous(labels=scales::percent,breaks=seq(-0.6,0.6,0.3))+
-  scale_x_continuous(breaks=seq(0,53,13))+
-   theme(panel.border =element_rect(color="transparent",fill="transparent"),
-          panel.background=element_rect(fill="white"),
-          panel.grid.major = element_line(colour = "lightgrey"),
-          panel.grid.minor = element_line(colour = "lightgrey"),
-          strip.background = element_rect(color="transparent",fill="transparent"),
-          plot.title=element_text(size=10,face="bold"),
-          plot.subtitle=element_text(size=9),
-          strip.text=element_text(size=5),
-          axis.text.x=element_text(size=5),
-          axis.text.y=element_text(size=5))+
-  labs(x="week",y=NULL,title="Weekly change in Tfl bike rentals",subtitle="%change from weekly averages\ncalculated between 2015-2019")+
-  guides(fill=F,color=F)+
-  geom_rug(aes(x=week,color=group))+
-  scale_color_manual(values=c("#fa9fb5","#fcbba1"))
- 
-
+```{r, ggpairs}
+omega %>% 
+  select(gender, experience, salary) %>% #order variables they will appear in ggpairs()
+  ggpairs(aes(colour=gender, alpha = 0.3))+
+  theme_bw()
 ```
 
-Should you use the mean or the median to calculate your expected rentals? Why?
 
-We should use the mean of the rentals for each month during the 6 years as the expected rentals. The expected value is calculated by multiplying each of the possible outcomes by the likelihood each outcome will occur and then summing all of those values. However, using median number will leave out the effect caused by the possible extreme numbers on the expected value. So, here mean of the rentals is more appropriate to be used as a proxy of the expected value.
-# ------------------end of project 4----------------------
+
+

@@ -1,7 +1,5 @@
 ---
-title: 'Session 4: Homework 2'
-author: "Your name goes here"
-date: "`r Sys.Date()`"
+title: "Trump's Approval Margins"
 output:
   html_document:
     theme: flatly
@@ -46,7 +44,6 @@ library(vroom)
 ```
 
 
-# ------------------begin of project 2----------------------
 ##Trump's Approval Margins
 
 As we saw in class, fivethirtyeight.com has detailed data on [all polls that track the president's approval ](https://projects.fivethirtyeight.com/trump-approval-ratings)
@@ -107,4 +104,3 @@ plot1
 
 ```
 We can observe that the range for week 15 is lower than the range for week 34. This means that the degree of certainty of the results is more in week 15 when compared to the degree of certainty of results of week 34. This could be because the average sample size in week 15 is greater than the average sample size in week 34. As the sample size increases, the variation around the mean reduces, giving us a narrower confidence interval.  
-# ------------------end of project 2----------------------

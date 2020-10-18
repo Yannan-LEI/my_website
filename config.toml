@@ -92,8 +92,8 @@ disqusShortname = ""
     # Display your showcases here.
     
     [[params.tiles.showcase]]
-      title = "Climate change and temperature anomalies"
-      subtitle = "Define temperature anomalies"
+      title = "Where Do People Drink The Most Beer, Wine And Spirits?"
+      subtitle = "Ggplot in action"
       image = "projects/tile1.jpg"
       url = "projects/project1/index"
 
@@ -104,14 +104,14 @@ disqusShortname = ""
       url = "projects/project2"
 
     [[params.tiles.showcase]]
-      title = "CDC COVID-19 Public Use Data"
-      subtitle = "Lorem Etiam Nullam"
+      title = "Youth Risk Behavior Surveillance"
+      subtitle = "Analyze youth health patterns"
       image = "projects/tile3.jpg"
       url = "projects/project3"
 
     [[params.tiles.showcase]]
-      title = "Excess rentals in TfL bike sharing"
-      subtitle = "Facet grid that plots bikes hired by month and year"
+      title = "Omega Group plc- Pay Discrimination"
+      subtitle = "Analyze the gender difference on salary"
       image = "projects/tile4.jpg"
       url = "projects/project4"
 
@@ -138,12 +138,9 @@ disqusShortname = ""
   # Section Type Two
   [params.two]
     enable = true
-    title = "Massa libero"
-    subtitle = """Nullam et orci eu lorem consequat tincidunt vivamus et sagittis libero. 
-    Mauris aliquet magna magna sed nunc rhoncus pharetra. 
-    Pellentesque condimentum sem. In efficitur ligula tate urna. Maecenas laoreet massa vel lacinia pellentesque lorem ipsum dolor. 
-    Nullam et orci eu lorem consequat tincidunt. Vivamus et sagittis libero.
-    Mauris aliquet magna magna sed nunc rhoncus amet pharetra et feugiat tempus."""
+    title = "Bring along your city memory"
+    subtitle = """crème de la crème. 
+    I always believe that you are where you live. I was born in Xi’an, the birthplace of ancient Chinese civilization and I was immersed in rich cultural practices during my childhood there. My undergraduate degree was completed in Hong Kong, the city that shaped me what I am today. Hong Kong has segregation, endless overtime work and sky-high housing price. But for me, having friends around in this city is just super awesome. Morocco is my backpack spot in plan where colorful engraved woods alternate with vibrant mosaics. Venturing into the Sahara would be surreal especially for camping under the night starry sky. """
     buttonText = "Get Started"
     url = "blogs"
 
@@ -207,7 +204,7 @@ disqusShortname = ""
     
     [[params.footer.social]]
       icon = "fa-github"
-      url= "https://www.github.com"
+      url= "https://github.com/Yannan-LEI/my_website"
       label = "GitHub"
 
     [[params.footer.social]]

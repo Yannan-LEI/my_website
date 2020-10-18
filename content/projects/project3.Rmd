@@ -1,7 +1,5 @@
 ---
-title: 'Session 4: Homework 2'
-author: "Your name goes here"
-date: "`r Sys.Date()`"
+title: "Youth Risk Behavior Surveillance"
 output:
   html_document:
     theme: flatly
@@ -36,97 +34,213 @@ knitr::opts_chunk$set(
 library(tidyverse)  # Load ggplot2, dplyr, and all the other tidyverse packages
 library(mosaic)
 library(ggthemes)
-library(lubridate)
+library(GGally)
+library(readxl)
 library(here)
 library(skimr)
 library(janitor)
-library(httr)
-library(readxl)
-library(vroom)
+library(broom)
+library(tidyquant)
+library(infer)
+library(openintro)
+library(tidyquant)
 ```
 
 
-# ------------------begin of project 3----------------------
-# CDC COVID-19 Public Use Data
+Every two years, the Centers for Disease Control and Prevention conduct the [Youth Risk Behavior Surveillance System (YRBSS)](https://www.cdc.gov/healthyyouth/data/yrbs/index.htm) survey, where it takes data from high schoolers (9th through 12th grade), to analyze health patterns. You will work with a selected group of variables from a random sample of observations during one of the years the YRBSS was conducted.
 
-Let us revisit the [CDC Covid-19 Case Surveillance Data](https://data.cdc.gov/Case-Surveillance/COVID-19-Case-Surveillance-Public-Use-Data/vbim-akqf). There are well over 3 million entries of individual, de-identified patient data. Since this is a large file, I suggest you use `vroom` to load it and you keep `cache=TRUE` in the chunk options.
+## Load the data
+
+This data is part of the `openintro` textbook and we can load and inspect it. There are observations on 13 different variables, some categorical and some numerical. The meaning of each variable can be found by bringing up the help file:
+
+?yrbss
+
+```{r}
+data(yrbss)
+glimpse(yrbss)
 
 
-```{r, cache=TRUE}
-# file contains 11 variables and 3.66m rows and is well over 380Mb. 
-# It will take time to download
-
-# URL link to CDC to download data
-url <- "https://data.cdc.gov/api/views/vbim-akqf/rows.csv?accessType=DOWNLOAD"
 
 ```
 
-Given the data we have, I would like you to produce two graphs that show death % rate:
+Before you carry on with your analysis, it's is always a good idea to check with `skimr::skim()` to get a feel for missing values, summary statistics of numerical variables, and a very rough histogram.
 
-1. by age group, sex, and whether the patient had co-morbidities or not
-1. by age group, sex, and whether the patient was admited to Intensive Care Unit (ICU) or not.
+## Exploratory Data Analysis
 
+You will first start with analyzing the `weight` of participants in kilograms. Using visualization and summary statistics, describe the distribution of weights. How many observations are we missing weights from?
 
-```{r covid_challenge, echo=FALSE, out.width="100%"}
-knitr::include_graphics(here::here("images", "covid_death_rate_comorbidities.png"), error = FALSE)
-knitr::include_graphics(here::here("images", "covid_death_rate_icu.png"), error = FALSE)
+```{r, eda_on_weight}
 
-covid_data <- vroom::vroom(url)%>% # If vroom::vroom(url) doesn't work, use read_csv(url)
-  clean_names()
+skim(yrbss)
 
-covid_clean <- covid_data %>% 
-  select(5,6,9,10,11) %>% 
-  group_by(age_group,death_yn) %>% 
-  filter(death_yn != "Missing",death_yn !="Unknown" , medcond_yn !="Missing", medcond_yn !="Unknown", sex != "Missing",sex != "Other",    sex != "Unknown", icu_yn != "Unknown", icu_yn != "Missing")
+weight_plot <- yrbss %>% 
+  select(weight) %>%  # dropping all the missing information from this dataframe
+  drop_na()
 
-
-covid_death_medcond <- covid_clean %>% 
-  group_by(age_group, sex, medcond_yn, death_yn) %>%
-  summarise(Number=n()) %>% 
-  mutate(Percentage=Number/sum(Number)*100) %>% 
-  filter(death_yn=="Yes")
-
-  icu.labs <- c("Addmited ICU", "Not Admitted ICU")
-  names(icu.labs) <- c("Yes", "No")
-
-  morb.labs <- c("Comorbidities", "No Comorbidities")
-  names(morb.labs) <- c("Yes", "No")
+weight_statistics <- weight_plot %>% 
+  summarise(mean = mean(weight, na.rm = TRUE), median = median(weight, na.rm = TRUE), stdev = sd(weight, na.rm = TRUE))
+    
+    weight_plot %>% 
+  ggplot(aes(x=weight))+            # plotting all the summary statistics
+  geom_density(alpha=0.2) +
+  theme_economist() +
+    geom_vline(aes(xintercept = weight_statistics$mean, colour = 'mean'), linetype="dashed", size = 2) +
+    geom_vline(aes(xintercept = weight_statistics$median, colour = 'median'), linetype = "dashed", size = 2) +
+    geom_vline(aes(xintercept = weight_statistics$stdev, colour = 'stdev'), linetype = "dashed" ,size = 2) +
+    scale_color_manual(name = NULL, values = c(mean = "#F36F21", median = "#FFF200", stdev= "#002144"))  +
+    labs(title = "Density plot for weight distribution")
   
-ggplot(covid_death_medcond, aes(x=Percentage, y=age_group)) + geom_col(fill="magenta") + facet_grid(cols = vars(sex), 
-       rows = vars(medcond_yn), 
-       as.table = FALSE, labeller = labeller(medcond_yn = morb.labs)) + 
-       labs(title = "Covid % death rate by age group, sex and presence of comorbidities", x="% death rate", y="") +
-       geom_text(aes(label=round(Percentage, digits = 1)),hjust=0, vjust=0) 
+
+
+
+
+```
+
+Next, consider the possible relationship between a high schooler’s weight and their physical activity. Plotting the data is a useful first step because it helps us quickly visualize trends, identify strong associations, and develop research questions.
+
+Let’s create a new variable `physical_3plus`, which will be `yes` if they are physically active for at least 3 days a week, and `no` otherwise.
 
   
-  covid_death_icu <- covid_clean %>% 
-  group_by(age_group, sex, icu_yn, death_yn) %>%
-  summarise(Number=n()) %>% 
-  mutate(Percentage=Number/sum(Number)*100) %>% 
-  filter(death_yn=="Yes")
+```{r}
+yrbss <- yrbss %>% 
+  mutate(physical_3plus = ifelse(physically_active_7d >= 3, "yes", "no"))
 
-ggplot(covid_death_icu, aes(x=Percentage, y=age_group)) + geom_col(fill="purple") + facet_grid(cols = vars(sex), 
-       rows = vars(icu_yn), 
-       as.table = FALSE, labeller = labeller(icu_yn = icu.labs)) + 
-       labs(title = "Covid % death rate by age group, sex and admition to ICU", x="% death rate", y="") +
-       geom_text(aes(label=round(Percentage, digits = 1)),hjust=0, vjust=0)
+yrbss %>% filter(!is.na(physical_3plus)) %>% 
+  group_by(physical_3plus) %>% 
+  summarise(count = n()) %>% 
+  mutate(prop= count/sum(count))
+
+```
+Can you provide a 95% confidence interval for the population proportion of high schools that are *NOT* active 3 or more days per week?
+
+  
+Make a boxplot of `physical_3plus` vs. `weight`. Is there a relationship between these two variables? What did you expect and why?
+
+```{r, boxplot}
+  
+# Calculating confidence interval of proportion of 'no'
+
+bootstrap_not_active <- yrbss %>% filter(physical_3plus %in% c("yes","no")) %>% 
+  specify(response=physical_3plus, success="no") %>%
+  generate(reps=1000, type="bootstrap") %>% 
+  calculate(stat="prop")
+
+bootstrap_not_active %>% get_confidence_interval() 
+
+
+# Creating a boxplot to how relationship between physical_3plus and weight 
+
+yrbss %>% 
+  # drop_na() %>% 
+ggplot(aes(x=physical_3plus, y=weight)) +
+  geom_boxplot()
+  
+
+```
+***************INSERT COMMENTS HERE***************
+ - people who are not exercising may not answer questions ---> hence put NA
+ - No and Yes are quite similar; we don't know about statistical significance based on a boxplot 
+ - Difference may or may not be statistically significant --> it comes down to the assumptions used 
+
+
+## Confidence Interval
+
+Boxplots show how the medians of the two distributions compare, but we can also compare the means of the distributions using either a confidence interval or a hypothesis test. Note that when we calculate the mean/SD, etc weight in these groups using the mean function, we must ignore any missing values by setting the `na.rm = TRUE`.
+
+
+```{r}
+yrbss %>%
+  group_by(physical_3plus) %>%
+  filter(!is.na(physical_3plus)) %>% 
+  summarise(mean_weight = mean(weight, na.rm = TRUE),
+            sd_weight = sd(weight, na.rm=TRUE),
+            count = n(),
+            se_weight = sd_weight/sqrt(count),
+            t_critical = qt(0.975, count-1), 
+            margin_of_error = t_critical * se_weight,
+            lower = mean_weight - t_critical * se_weight,
+            upper = mean_weight + t_critical * se_weight
+            )
+
+```
+
+There is an observed difference of about 1.77kg (68.44 - 66.67), and we notice that the two confidence intervals do not overlap. It seems that the difference is at least 95% statistically significant. Let us also conduct a hypothesis test.
+
+## Hypothesis test with formula
+
+Write the null and alternative hypotheses for testing whether mean weights are different for those who exercise at least times a week and those who don’t.
+
+```{r}
+t.test(weight ~ physical_3plus, data = yrbss)
+
+# Null: Mean_no_exercise - Mean_yes_exercise = 0 
+# Alternative:Mean_no_exercise - Mean_yes_exercise =/ 0
+
+
 ```
 
 
 
-``` {r,primary school enrolment}
+## Hypothesis test with `infer`
 
-# relationship between primary school enrollment and fertility rates 
 
-enrolment_data <- ggplot(tidy_country_data, aes(x=School_enrollment, y=Fertility_rate, colour=region))+
-  geom_point()+
-  geom_smooth()+
-  labs(x="Enrolment", y="Fertility", title="Relationship between enrolment and fertility")+
-  theme_economist()+
-  theme(axis.title=element_text()) 
-  
-enrolment_data
+Next, we will introduce a new function, `hypothesize`, that falls into the infer workflow. You will use this method for conducting hypothesis tests.
 
+But first, we need to initialize the test, which we will save as `obs_diff`.
+
+```{r}
+obs_diff <- yrbss %>%
+  specify(weight ~ physical_3plus) %>%
+  calculate(stat = "diff in means", order = c("yes", "no"))
 
 ```
-# ------------------end of project 3----------------------
+
+
+
+Notice how you can use the functions specify and calculate again like you did for calculating confidence intervals. Here, though, the statistic you are searching for is the difference in means, with the order being yes - no != 0.
+
+After you have initialized the test, you need to simulate the test on the null distribution, which we will save as null.
+
+
+```{r}
+null_dist <- yrbss %>%
+  specify(weight ~ physical_3plus) %>%
+  hypothesize(null = "independence") %>%
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "diff in means", order = c("yes", "no"))
+
+null_dist
+
+```
+
+
+Here, `hypothesize` is used to set the null hypothesis as a test for independence, i.e., that there is no difference between the two population means. In one sample cases, the null argument can be set to *point* to test a hypothesis relative to a point estimate.
+
+Also, note that the `type` argument within generate is set to permute, which is the argument when generating a null distribution for a hypothesis test.
+
+We can visualize this null distribution with the following code:
+
+```{r}
+ggplot(data = null_dist, aes(x = stat)) +
+  geom_histogram() +
+  theme_economist()
+
+```
+
+
+Now that the test is initialized and the null distribution formed, we can visualise to see how many of these null permutations have a difference of at least `obs_stat` of `r obs_diff %>% pull() %>% round(2)`?
+
+We can also calculate the p-value for your hypothesis test using the function `infer::get_p_value()`.
+
+```{r}
+
+null_dist %>% visualize() +
+  shade_p_value(obs_stat = obs_diff, direction = "two-sided")
+
+null_dist %>%
+  get_p_value(obs_stat = obs_diff, direction = "two_sided")
+
+```
+
+
+This the standard workflow for performing hypothesis tests.
